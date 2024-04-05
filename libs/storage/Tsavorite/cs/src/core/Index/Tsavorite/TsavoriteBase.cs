@@ -3,6 +3,7 @@
 
 using System;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Threading;
 using Microsoft.Extensions.Logging;
 
@@ -14,6 +15,9 @@ namespace Tsavorite.core
         public long size_mask;
         public int size_bits;
         public HashBucket[] tableRaw;
+#if !NET5_0_OR_GREATER
+        public GCHandle pin;
+#endif
         public HashBucket* tableAligned;
     }
 
@@ -68,6 +72,10 @@ namespace Tsavorite.core
 
         private void Free(int version)
         {
+#if !NET5_0_OR_GREATER
+            if (state[version].pin.IsAllocated)
+                state[version].pin.Free();
+#endif
         }
 
         /// <summary>
@@ -110,7 +118,12 @@ namespace Tsavorite.core
             state[version].size_mask = size - 1;
             state[version].size_bits = Utility.GetLogBase2((int)size);
 
+#if NET5_0_OR_GREATER
             state[version].tableRaw = GC.AllocateArray<HashBucket>((int)(aligned_size_bytes / Constants.kCacheLineBytes), true);
+#else
+            state[version].tableRaw = new HashBucket[(int)(aligned_size_bytes / Constants.kCacheLineBytes)];
+            state[version].pin = GCHandle.Alloc(state[version].tableRaw, GCHandleType.Pinned);
+#endif
             long sectorAlignedPointer = ((long)Unsafe.AsPointer(ref state[version].tableRaw[0]) + (sector_size - 1)) & ~(sector_size - 1);
             state[version].tableAligned = (HashBucket*)sectorAlignedPointer;
         }

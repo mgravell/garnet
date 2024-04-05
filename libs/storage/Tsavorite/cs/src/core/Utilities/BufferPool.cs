@@ -109,7 +109,12 @@ namespace Tsavorite.core
             int recordSize = 1;
             int requiredSize = sectorSize + (((numRecords) * recordSize + (sectorSize - 1)) & ~(sectorSize - 1));
 
+#if NET5_0_OR_GREATER
             buffer = GC.AllocateArray<byte>(requiredSize, true);
+#else
+            buffer = new byte[requiredSize];
+            handle = GCHandle.Alloc(buffer, GCHandleType.Pinned);
+#endif
             long bufferAddr = (long)Unsafe.AsPointer(ref buffer[0]);
             aligned_pointer = (byte*)((bufferAddr + (sectorSize - 1)) & ~((long)sectorSize - 1));
             offset = (int)((long)aligned_pointer - bufferAddr);
@@ -122,6 +127,9 @@ namespace Tsavorite.core
         public void Dispose()
         {
             buffer = null;
+#if !NET5_0_OR_GREATER
+            handle.Free();
+#endif
 #if CHECK_FREE
             this.Free = true;
 #endif
@@ -279,12 +287,16 @@ namespace Tsavorite.core
                 return page;
             }
 
-            page = new SectorAlignedMemory(level: index)
-            {
-                buffer = GC.AllocateArray<byte>(sectorSize * (1 << index), !UnpinOnReturn)
-            };
+            page = new SectorAlignedMemory(level: index);
+
+#if NET5_0_OR_GREATER
+            page.buffer = GC.AllocateArray<byte>(sectorSize * (1 << index), !UnpinOnReturn);
             if (UnpinOnReturn)
                 page.handle = GCHandle.Alloc(page.buffer, GCHandleType.Pinned);
+#else
+            page.buffer = new byte[sectorSize * (1 << index)];
+            page.handle = GCHandle.Alloc(page.buffer, GCHandleType.Pinned);
+#endif
             long pageAddr = (long)Unsafe.AsPointer(ref page.buffer[0]);
             page.aligned_pointer = (byte*)((pageAddr + (sectorSize - 1)) & ~((long)sectorSize - 1));
             page.offset = (int)((long)page.aligned_pointer - pageAddr);

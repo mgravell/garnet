@@ -109,8 +109,18 @@ namespace Tsavorite.core
                 {
                     var keyLength = BinaryPrimitives.ReadInt32LittleEndian(input);
                     input = input.Slice(sizeof(int));
-
+#if NETCOREAPP3_0_OR_GREATER
                     var iteratorKey = Encoding.UTF8.GetString(input.Slice(0, keyLength));
+#else
+                    string iteratorKey;
+                    unsafe
+                    {
+                        fixed (byte* ptr = input)
+                        {
+                            iteratorKey = Encoding.UTF8.GetString(ptr, keyLength);
+                        }
+                    }
+#endif
                     input = input.Slice(keyLength);
 
                     var iteratorValue = BinaryPrimitives.ReadInt64LittleEndian(input);

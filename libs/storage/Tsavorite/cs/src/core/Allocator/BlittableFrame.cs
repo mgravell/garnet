@@ -3,6 +3,7 @@
 
 using System;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 namespace Tsavorite.core
 {
@@ -14,6 +15,9 @@ namespace Tsavorite.core
         public readonly int frameSize, pageSize, sectorSize;
         public readonly byte[][] frame;
         public readonly long[] pointers;
+#if !NET5_0_OR_GREATER
+        private readonly GCHandle[] pins;
+#endif
 
         public BlittableFrame(int frameSize, int pageSize, int sectorSize)
         {
@@ -23,15 +27,19 @@ namespace Tsavorite.core
 
             frame = new byte[frameSize][];
             pointers = new long[frameSize];
+            pins = new GCHandle[frameSize];
         }
 
         public unsafe void Allocate(int index)
         {
             var adjustedSize = pageSize + 2 * sectorSize;
-
-            byte[] tmp = GC.AllocateArray<byte>(adjustedSize, true);
+#if NET5_0_OR_GREATER
+            byte[] tmp = GC.AllocateArray<byte>(adjustedSize, pinned: true);
+#else
+            byte[] tmp = new byte[adjustedSize];
+            pins[index] = GCHandle.Alloc(tmp, GCHandleType.Pinned);
+#endif
             long p = (long)Unsafe.AsPointer(ref tmp[0]);
-            Array.Clear(tmp, 0, adjustedSize);
             pointers[index] = (p + (sectorSize - 1)) & ~((long)sectorSize - 1);
             frame[index] = tmp;
         }
@@ -48,6 +56,16 @@ namespace Tsavorite.core
 
         public void Dispose()
         {
+#if !NET5_0_OR_GREATER
+            for (int i = 0; i < pins.Length; i++)
+            {
+                if (pins[i].IsAllocated)
+                {
+                    pins[i].Free();
+                    pins[i] = default; // in case of double-dispose
+                }
+            }
+#endif
         }
     }
 }

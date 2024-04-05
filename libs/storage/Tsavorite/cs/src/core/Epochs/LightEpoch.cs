@@ -77,8 +77,11 @@ namespace Tsavorite.core
         /// Thread protection status entries.
         /// </summary>
         readonly Entry[] tableRaw;
+#if !NET5_0_OR_GREATER
+        readonly GCHandle tableRawPin;
+#endif
         readonly Entry* tableAligned;
-
+        static readonly GCHandle threadIndexPin;
         static readonly Entry[] threadIndex;
         static readonly Entry* threadIndexAligned;
 
@@ -108,7 +111,12 @@ namespace Tsavorite.core
             long p;
 
             // Over-allocate to do cache-line alignment
+#if NET5_0_OR_GREATER
             threadIndex = GC.AllocateArray<Entry>(kTableSize + 2, true);
+#else
+            threadIndex = new Entry[kTableSize + 2];
+            threadIndexPin = GCHandle.Alloc(threadIndex, GCHandleType.Pinned);
+#endif
             p = (long)Unsafe.AsPointer(ref threadIndex[0]);
 
             // Force the pointer to align to 64-byte boundaries
@@ -122,8 +130,12 @@ namespace Tsavorite.core
         public LightEpoch()
         {
             long p;
-
+#if NET5_0_OR_GREATER
             tableRaw = GC.AllocateArray<Entry>(kTableSize + 2, true);
+#else
+            tableRaw = new Entry[kTableSize + 2];
+            tableRawPin = GCHandle.Alloc(tableRaw, GCHandleType.Pinned);
+#endif
             p = (long)Unsafe.AsPointer(ref tableRaw[0]);
 
             // Force the pointer to align to 64-byte boundaries
@@ -146,6 +158,9 @@ namespace Tsavorite.core
         {
             CurrentEpoch = 1;
             SafeToReclaimEpoch = 0;
+#if !NET5_0_OR_GREATER
+            tableRawPin.Free();
+#endif
         }
 
         /// <summary>

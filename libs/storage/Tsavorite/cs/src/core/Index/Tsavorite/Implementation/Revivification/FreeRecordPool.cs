@@ -428,6 +428,9 @@ namespace Tsavorite.core
     {
         internal readonly TsavoriteKV<Key, Value> store;
         internal readonly FreeRecordBin[] bins;
+#if !NET5_0_OR_GREATER
+        private readonly GCHandle pin;
+#endif
 
         internal int numberOfBinsToSearch;
         internal bool IsFixedLength;
@@ -461,7 +464,13 @@ namespace Tsavorite.core
             var sizeIndexCount = RoundUp(settings.FreeRecordBins.Length * sizeof(int), Constants.kCacheLineBytes) / sizeof(int);
 
             // Overallocate the GCHandle by one cache line so we have room to offset the returned pointer to make it cache-aligned.
+
+#if NET5_0_OR_GREATER
             sizeIndexArray = GC.AllocateArray<int>(sizeIndexCount + Constants.kCacheLineBytes / sizeof(int), pinned: true);
+#else
+            sizeIndexArray = new int[sizeIndexCount + Constants.kCacheLineBytes / sizeof(int)];
+            pin = GCHandle.Alloc(sizeIndexArray, GCHandleType.Pinned);
+#endif
             long p = (long)Unsafe.AsPointer(ref sizeIndexArray[0]);
 
             // Force the pointer to align to cache boundary.
@@ -574,6 +583,9 @@ namespace Tsavorite.core
 
         public void Dispose()
         {
+#if !NET5_0_OR_GREATER
+            pin.Free();
+#endif
             foreach (var bin in bins)
                 bin.Dispose();
             checkEmptyWorker.Dispose();

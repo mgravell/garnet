@@ -5,6 +5,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Threading;
 
 namespace Tsavorite.core
@@ -24,8 +25,11 @@ namespace Tsavorite.core
     /// </summary>
     public sealed unsafe class LocalMemoryDevice : StorageDeviceBase
     {
-        readonly byte[][] orig_ram_segments;
-        readonly byte*[] ram_segment_ptrs;
+        private readonly byte[][] orig_ram_segments;
+        private readonly byte*[] ram_segment_ptrs;
+#if !NET5_0_OR_GREATER
+        private readonly GCHandle[] pins;
+#endif
         private readonly int num_segments;
         private readonly ConcurrentQueue<IORequestLocalMemory>[] ioQueue;
         private readonly Thread[] ioProcessors;
@@ -53,12 +57,20 @@ namespace Tsavorite.core
             latencyTicks = latencyMs * TimeSpan.TicksPerMillisecond;
 
             ram_segment_ptrs = new byte*[num_segments];
+#if !NET5_0_OR_GREATER
+            pins = new GCHandle[num_segments];
+#endif
             orig_ram_segments = new byte[num_segments][];
 
 
             for (int i = 0; i < num_segments; i++)
             {
+#if NET5_0_OR_GREATER
                 orig_ram_segments[i] = GC.AllocateArray<byte>((int)sz_segment, true);
+#else
+                orig_ram_segments[i] = new byte[(int)sz_segment];
+                pins[i] = GCHandle.Alloc(orig_ram_segments, GCHandleType.Pinned);
+#endif
                 ram_segment_ptrs[i] = (byte*)Unsafe.AsPointer(ref orig_ram_segments[i][0]);
             }
             terminated = false;
@@ -187,6 +199,12 @@ namespace Tsavorite.core
             terminated = true;
             for (int i = 0; i != ioProcessors.Length; i++)
                 ioProcessors[i].Join();
+#if !NET5_0_OR_GREATER
+            foreach (var pin in pins)
+            {
+                if (pin.IsAllocated) pin.Free();
+            }
+#endif
         }
     }
 }

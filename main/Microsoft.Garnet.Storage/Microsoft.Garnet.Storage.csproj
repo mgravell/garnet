@@ -1,0 +1,30 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <!-- note this package is for packaging only -->
+  <PropertyGroup>
+    <TargetFrameworks>net8.0;net7.0;net6.0;netstandard2.1;netstandard2.0</TargetFrameworks>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <IsPackable>true</IsPackable>
+    <RepositoryUrl>https://github.com/microsoft/garnet.git</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageProjectUrl>https://microsoft.github.io/garnet</PackageProjectUrl>
+    <Authors>Microsoft</Authors>
+    <Description>Garnet is a remote cache-store from Microsoft Research, that offers strong performance (throughput and latency),
+      scalability, storage, recovery, cluster sharding, key migration, and replication features. Garnet uses the Redis RESP wire
+      protocol and can work with existing Redis clients.</Description>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReleaseNotes>See https://github.com/microsoft/garnet for details.</PackageReleaseNotes>
+    <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
+    <Copyright>© Microsoft Corporation. All rights reserved.</Copyright>
+    <PackageTags>Garnet key-value store cache dictionary hashtable concurrent persistent remote cluster Redis RESP</PackageTags>
+    <DefaultLanguage>en-US</DefaultLanguage>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\..\README.md" Link="README.md" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\libs\storage\Tsavorite\cs\src\core\Tsavorite.core.csproj" ReferenceOutputAssembly="true" OutputItemType="Content" TreatAsPackageReference="false" />
+    <ProjectReference Include="..\..\libs\storage\Tsavorite\cs\src\devices\AzureStorageDevice\Tsavorite.devices.AzureStorageDevice.csproj" ReferenceOutputAssembly="true" OutputItemType="Content" TreatAsPackageReference="false" />
+  </ItemGroup>
+</Project>

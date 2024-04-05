@@ -9,6 +9,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -72,7 +73,9 @@ namespace Tsavorite.core
 
         private readonly T[][] values = new T[LevelSize][];
         private readonly IntPtr[] pointers = new IntPtr[LevelSize];
-
+#if !NET5_0_OR_GREATER
+        private readonly GCHandle[] pins = new GCHandle[LevelSize];
+#endif
         private volatile int writeCacheLevel;
 
         private volatile int count;
@@ -107,15 +110,18 @@ namespace Tsavorite.core
             this.logger = logger;
             freeList = new ConcurrentQueue<long>();
 
+#if NET5_0_OR_GREATER
             values[0] = GC.AllocateArray<T>(PageSize + SectorSize, pinned: IsBlittable);
+#else
+            values[0] = new T[PageSize + SectorSize];
+#endif
             if (IsBlittable)
             {
+#if !NET5_0_OR_GREATER
+                pins[0] = GCHandle.Alloc(values[0], GCHandleType.Pinned);
+#endif
                 pointers[0] = (IntPtr)(((long)Unsafe.AsPointer(ref values[0][0]) + (SectorSize - 1)) & ~(SectorSize - 1));
             }
-
-#if !(CALLOC)
-            Array.Clear(values[0], 0, PageSize);
-#endif
 
             writeCacheLevel = -1;
             Interlocked.MemoryBarrier();

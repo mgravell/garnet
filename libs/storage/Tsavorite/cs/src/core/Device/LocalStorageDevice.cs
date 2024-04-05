@@ -15,7 +15,9 @@ namespace Tsavorite.core
     /// <summary>
     /// Local storage device
     /// </summary>
+#if NET5_0_OR_GREATER
     [System.Runtime.Versioning.SupportedOSPlatform("windows")]
+#endif
     public unsafe class LocalStorageDevice : StorageDeviceBase
     {
         /// <summary>
@@ -550,7 +552,9 @@ namespace Tsavorite.core
         public bool IsCompleted => throw new NotImplementedException();
     }
 
+#if NET5_0_OR_GREATER
     [System.Runtime.Versioning.SupportedOSPlatform("windows")]
+#endif
     sealed unsafe class LocalStorageDeviceCompletionWorker
     {
         public void Start(IntPtr ioCompletionPort, IOCompletionCallback _callback)
