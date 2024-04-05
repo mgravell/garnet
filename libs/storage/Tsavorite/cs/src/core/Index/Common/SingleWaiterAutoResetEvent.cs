@@ -133,13 +133,14 @@ namespace Tsavorite.core
             while (true)
             {
                 newValue = oldValue | value;
-                if (newValue == oldValue) return newValue; // no change needed
+                if (newValue == oldValue) break; // no change needed
 
                 var updated = Interlocked.CompareExchange(ref location, oldValue, newValue);
-                if (updated == oldValue) return newValue; // we exchanged
+                if (updated == oldValue) break; // we exchanged
 
                 oldValue = updated; // redo from start, with the updated snapshot value
             }
+            return oldValue;
         }
 
         private static int InterlockedAnd(ref int location, int value)
@@ -148,13 +149,14 @@ namespace Tsavorite.core
             while (true)
             {
                 newValue = oldValue & value;
-                if (newValue == oldValue) return newValue; // no change needed
+                if (newValue == oldValue) break; // no change needed
 
                 var updated = Interlocked.CompareExchange(ref location, oldValue, newValue);
-                if (updated == oldValue) return newValue; // we exchanged
+                if (updated == oldValue) break; // we exchanged
 
                 oldValue = updated; // redo from start, with the updated snapshot value
             }
+            return oldValue;
         }
 #endif
     }

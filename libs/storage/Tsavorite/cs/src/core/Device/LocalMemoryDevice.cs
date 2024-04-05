@@ -69,7 +69,7 @@ namespace Tsavorite.core
                 orig_ram_segments[i] = GC.AllocateArray<byte>((int)sz_segment, true);
 #else
                 orig_ram_segments[i] = new byte[(int)sz_segment];
-                pins[i] = GCHandle.Alloc(orig_ram_segments, GCHandleType.Pinned);
+                pins[i] = GCHandle.Alloc(orig_ram_segments[i], GCHandleType.Pinned);
 #endif
                 ram_segment_ptrs[i] = (byte*)Unsafe.AsPointer(ref orig_ram_segments[i][0]);
             }
