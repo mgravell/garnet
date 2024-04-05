@@ -4,6 +4,7 @@
 using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Threading;
 using Microsoft.Extensions.Logging;
 
@@ -15,6 +16,10 @@ namespace Tsavorite.core
         private readonly byte[][] values;
         private readonly long[] pointers;
         private readonly long* nativePointers;
+        private readonly GCHandle[] pins;
+#if !NET5_0_OR_GREATER
+        private GCHandle pointersPin;
+#endif
 
         internal static int KeySize => Unsafe.SizeOf<Key>();
         internal static int ValueSize => Unsafe.SizeOf<Value>();
@@ -31,8 +36,14 @@ namespace Tsavorite.core
             if (BufferSize > 0)
             {
                 values = new byte[BufferSize][];
+#if NET5_0_OR_GREATER
                 pointers = GC.AllocateArray<long>(BufferSize, true);
+#else
+                pointers = new long[BufferSize];
+                pointersPin = GCHandle.Alloc(pointers, GCHandleType.Pinned);
+#endif
                 nativePointers = (long*)Unsafe.AsPointer(ref pointers[0]);
+                pins = new GCHandle[BufferSize];
             }
         }
 
@@ -120,6 +131,13 @@ namespace Tsavorite.core
         {
             base.Dispose();
             overflowPagePool.Dispose();
+#if !NET5_0_OR_GREATER
+            pointersPin.Free();
+            for (int i = 0; i < pins.Length; i++)
+            {
+                if (pins[i].IsAllocated) pins[i].Free();
+            }
+#endif
         }
 
         public override AddressInfo* GetKeyAddressInfo(long physicalAddress)
@@ -149,11 +167,19 @@ namespace Tsavorite.core
 
             var adjustedSize = PageSize + 2 * sectorSize;
 
+#if NET5_0_OR_GREATER
             byte[] tmp = GC.AllocateArray<byte>(adjustedSize, true);
+#else
+            byte[] tmp = new byte[adjustedSize];
+            var pin = GCHandle.Alloc(tmp, GCHandleType.Pinned);
+#endif
             long p = (long)Unsafe.AsPointer(ref tmp[0]);
             Array.Clear(tmp, 0, adjustedSize);
             pointers[index] = (p + (sectorSize - 1)) & ~((long)sectorSize - 1);
             values[index] = tmp;
+#if !NET5_0_OR_GREATER
+            pins[index] = pin;
+#endif
         }
 
         internal override int OverflowPageCount => overflowPagePool.Count;

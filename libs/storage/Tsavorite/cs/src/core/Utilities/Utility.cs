@@ -5,6 +5,7 @@ using System;
 using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -147,7 +148,38 @@ namespace Tsavorite.core
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
-        internal static bool IsBlittable<T>() => !RuntimeHelpers.IsReferenceOrContainsReferences<T>();
+        internal static bool IsBlittable<T>()
+        {
+#if NET5_0_OR_GREATER
+            return !RuntimeHelpers.IsReferenceOrContainsReferences<T>();
+#else
+            return BlittableCache<T>.Value;
+#endif
+        }
+
+#if !NET5_0_OR_GREATER
+        static class BlittableCache<T> // memoize this, since not entirely cheap
+        {
+            public static readonly bool Value;
+            static BlittableCache()
+            {
+                if (default(T) == null)
+                    return; // false;
+
+                try
+                {
+                    var tmp = new T[1];
+                    var h = GCHandle.Alloc(tmp, GCHandleType.Pinned);
+                    h.Free();
+                }
+                catch (Exception)
+                {
+                    return; // false;
+                }
+                Value = true; // is blittable
+            }
+        }
+#endif
 
         /// <summary>
         /// Get 64-bit hash code for a long value
@@ -229,21 +261,56 @@ namespace Tsavorite.core
             return result;
         }
 
+#pragma warning disable CS1574 // crefs will fail on down-level
         /// <inheritdoc cref="BitOperations.RotateRight(ulong, int)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static ulong Rotr64(ulong x, int n) => BitOperations.RotateRight(x, n);
+        internal static ulong Rotr64(ulong x, int n)
+#if NET5_0_OR_GREATER
+            => BitOperations.RotateRight(x, n);
+#else
+            => (((x) >> n) | ((x) << (64 - n)));
+#endif
 
         /// <inheritdoc cref="BitOperations.IsPow2(ulong)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool IsPowerOfTwo(long x) => BitOperations.IsPow2(x);
+        public static bool IsPowerOfTwo(long x)
+#if NET5_0_OR_GREATER
+            => BitOperations.IsPow2(x);
+#else
+            => (x > 0) && ((x & (x - 1)) == 0);
+#endif
 
         /// <inheritdoc cref="BitOperations.Log2(uint)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int GetLogBase2(int x) => BitOperations.Log2((uint)x);
+        public static int GetLogBase2(int x)
+#if NET5_0_OR_GREATER
+            => BitOperations.Log2((uint)x);
+#else
+            => MultiplyDeBruijnBitPosition2[(uint)(x * 0x077CB531U) >> 27];
+
+        internal static readonly int[] MultiplyDeBruijnBitPosition2 = new int[32]
+        {
+            0, 1, 28, 2, 29, 14, 24, 3, 30, 22, 20, 15, 25, 17, 4, 8,
+            31, 27, 13, 23, 21, 19, 16, 7, 26, 12, 18, 6, 11, 5, 10, 9
+        };
+#endif
 
         /// <inheritdoc cref="BitOperations.Log2(ulong)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int GetLogBase2(ulong value) => BitOperations.Log2(value);
+        public static int GetLogBase2(ulong value)
+#if NET5_0_OR_GREATER
+            => BitOperations.Log2(value);
+#else
+
+        {
+            int i;
+            for (i = -1; value != 0; i++)
+                value >>= 1;
+
+            return (i == -1) ? 0 : i;
+        }
+#endif
+#pragma warning restore CS1574 // crefs will fail on down-level
 
         /// <summary>
         /// Check if power of two

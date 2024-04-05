@@ -238,9 +238,18 @@ namespace Tsavorite.core
                 // If index 0, then allocate space for next level.
                 if (index == 0)
                 {
+#if NET5_0_OR_GREATER
                     var tmp = GC.AllocateArray<T>(PageSize + SectorSize, pinned: IsBlittable);
+#else
+                    var tmp = new T[PageSize + SectorSize];
+#endif
                     if (IsBlittable)
+                    {
+#if !NET5_0_OR_GREATER
+                        pins[1] = GCHandle.Alloc(tmp, GCHandleType.Pinned);
+#endif
                         pointers[1] = (IntPtr)(((long)Unsafe.AsPointer(ref tmp[0]) + (SectorSize - 1)) & ~(SectorSize - 1));
+                    }
 
 #if !(CALLOC)
                     Array.Clear(tmp, 0, PageSize);
@@ -289,9 +298,18 @@ namespace Tsavorite.core
                 // Allocate for next page
                 int newBaseAddr = baseAddr + 1;
 
+#if NET5_0_OR_GREATER
                 var tmp = GC.AllocateArray<T>(PageSize + SectorSize, pinned: IsBlittable);
+#else
+                var tmp = new T[PageSize + SectorSize];
+#endif
                 if (IsBlittable)
+                {
+#if !NET5_0_OR_GREATER
+                    pins[newBaseAddr] = GCHandle.Alloc(tmp, GCHandleType.Pinned);
+#endif
                     pointers[newBaseAddr] = (IntPtr)(((long)Unsafe.AsPointer(ref tmp[0]) + (SectorSize - 1)) & ~(SectorSize - 1));
+                }
 
 #if !(CALLOC)
                 Array.Clear(tmp, 0, PageSize);
@@ -308,7 +326,16 @@ namespace Tsavorite.core
         /// <summary>
         /// Dispose
         /// </summary>
-        public void Dispose() => count = 0;
+        public void Dispose()
+        {
+#if !NET5_0_OR_GREATER
+            for (int i = 0; i < pins.Length; i++)
+            {
+                if (pins[i].IsAllocated) pins[i].Free();
+            }
+#endif
+            count = 0;
+        }
 
 
         #region Checkpoint

@@ -78,10 +78,10 @@ namespace Tsavorite.core
         /// </summary>
         readonly Entry[] tableRaw;
 #if !NET5_0_OR_GREATER
-        readonly GCHandle tableRawPin;
+        private GCHandle tableRawPin;
+        private static GCHandle threadIndexPin;
 #endif
         readonly Entry* tableAligned;
-        static readonly GCHandle threadIndexPin;
         static readonly Entry[] threadIndex;
         static readonly Entry* threadIndexAligned;
 

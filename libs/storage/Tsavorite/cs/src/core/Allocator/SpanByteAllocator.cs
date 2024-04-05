@@ -4,6 +4,7 @@
 using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Threading;
 using Microsoft.Extensions.Logging;
 using static Tsavorite.core.Utility;
@@ -19,6 +20,10 @@ namespace Tsavorite.core
         private readonly byte[][] values;
         private readonly long[] pointers;
         private readonly long* nativePointers;
+#if !NET5_0_OR_GREATER
+        private GCHandle pointersPin;
+        private readonly GCHandle[] pagePins;
+#endif
 
         private readonly OverflowPool<PageUnit> overflowPagePool;
 
@@ -30,7 +35,13 @@ namespace Tsavorite.core
             if (BufferSize > 0)
             {
                 values = new byte[BufferSize][];
+#if NET5_0_OR_GREATER
                 pointers = GC.AllocateArray<long>(BufferSize, true);
+#else
+                pointers = new long[BufferSize];
+                pointersPin = GCHandle.Alloc(pointers, GCHandleType.Pinned);
+                pagePins = new GCHandle[BufferSize];
+#endif
                 nativePointers = (long*)Unsafe.AsPointer(ref pointers[0]);
             }
         }
@@ -185,6 +196,13 @@ namespace Tsavorite.core
         {
             base.Dispose();
             overflowPagePool.Dispose();
+#if !NET5_0_OR_GREATER
+            pointersPin.Free();
+            for (int i = 0; i < pagePins.Length; i++)
+            {
+                if (pagePins[i].IsAllocated) pagePins[i].Free();
+            }
+#endif
         }
 
         public override AddressInfo* GetKeyAddressInfo(long physicalAddress)
@@ -216,11 +234,19 @@ namespace Tsavorite.core
 
             var adjustedSize = PageSize + 2 * sectorSize;
 
+#if NET5_0_OR_GREATER
             byte[] tmp = GC.AllocateArray<byte>(adjustedSize, true);
+#else
+            byte[] tmp = new byte[adjustedSize];
+            var pin = GCHandle.Alloc(tmp, GCHandleType.Pinned);
+#endif
             long p = (long)Unsafe.AsPointer(ref tmp[0]);
             Array.Clear(tmp, 0, adjustedSize);
             pointers[index] = (p + (sectorSize - 1)) & ~((long)sectorSize - 1);
             values[index] = tmp;
+#if !NET5_0_OR_GREATER
+            pagePins[index] = pin;
+#endif
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

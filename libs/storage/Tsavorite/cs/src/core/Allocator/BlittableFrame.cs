@@ -27,7 +27,9 @@ namespace Tsavorite.core
 
             frame = new byte[frameSize][];
             pointers = new long[frameSize];
+#if !NET5_0_OR_GREATER
             pins = new GCHandle[frameSize];
+#endif
         }
 
         public unsafe void Allocate(int index)
@@ -59,11 +61,7 @@ namespace Tsavorite.core
 #if !NET5_0_OR_GREATER
             for (int i = 0; i < pins.Length; i++)
             {
-                if (pins[i].IsAllocated)
-                {
-                    pins[i].Free();
-                    pins[i] = default; // in case of double-dispose
-                }
+                if (pins[i].IsAllocated) pins[i].Free();
             }
 #endif
         }

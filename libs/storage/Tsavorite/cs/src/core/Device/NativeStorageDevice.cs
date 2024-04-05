@@ -41,6 +41,8 @@ namespace Tsavorite.core
         #region Native storage interface
 
         const string NativeLibraryName = "native_device";
+
+#if NETCOREAPP3_0_OR_GREATER // otherwise, use default loader
         static readonly string NativeLibraryPath = null;
 
         static NativeStorageDevice()
@@ -59,6 +61,7 @@ namespace Tsavorite.core
                 libHandle = NativeLibrary.Load(NativeLibraryPath);
             return libHandle;
         }
+#endif
 
         /// <summary>
         /// Async callback delegate

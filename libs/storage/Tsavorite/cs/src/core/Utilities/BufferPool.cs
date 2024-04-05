@@ -250,7 +250,7 @@ namespace Tsavorite.core
         private static int Position(int v)
         {
             if (v == 1) return 0;
-            return BitOperations.Log2((uint)v - 1) + 1;
+            return Utility.GetLogBase2((uint)v - 1) + 1;
         }
 
         /// <summary>

@@ -190,6 +190,9 @@ namespace Tsavorite.core
         internal const int MinSegmentSize = MinRecordsPerBin;
 
         private readonly FreeRecord[] recordsArray;
+#if !NET5_0_OR_GREATER
+        private readonly GCHandle pin;
+#endif
         internal readonly int maxRecordSize, recordCount;
         protected readonly int minRecordSize, segmentSize, segmentCount, segmentRecordSizeIncrement;
 
@@ -252,7 +255,12 @@ namespace Tsavorite.core
             recordCount = segmentSize * segmentCount;
 
             // Overallocate the GCHandle by one cache line so we have room to offset the returned pointer to make it cache-aligned.
+#if NET5_0_OR_GREATER
             recordsArray = GC.AllocateArray<FreeRecord>(recordCount + Constants.kCacheLineBytes / FreeRecord.StructSize, pinned: true);
+#else
+            recordsArray = new FreeRecord[recordCount + Constants.kCacheLineBytes / FreeRecord.StructSize];
+            pin = GCHandle.Alloc(recordsArray, GCHandleType.Pinned);
+#endif
             long p = (long)Unsafe.AsPointer(ref recordsArray[0]);
 
             // Force the pointer to align to cache boundary.
@@ -420,7 +428,9 @@ namespace Tsavorite.core
 
         public void Dispose()
         {
-            // Currently nothing
+#if !NET5_0_OR_GREATER
+            pin.Free();
+#endif
         }
     }
 

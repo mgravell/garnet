@@ -200,9 +200,9 @@ namespace Tsavorite.core
             for (int i = 0; i != ioProcessors.Length; i++)
                 ioProcessors[i].Join();
 #if !NET5_0_OR_GREATER
-            foreach (var pin in pins)
+            for (int i = 0; i < pins.Length; i++)
             {
-                if (pin.IsAllocated) pin.Free();
+                if (pins[i].IsAllocated) pins[i].Free();
             }
 #endif
         }

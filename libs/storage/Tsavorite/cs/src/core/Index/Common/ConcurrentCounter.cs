@@ -22,13 +22,25 @@ namespace Tsavorite.core
             private fixed long padding[Constants.kCacheLineBytes / sizeof(long) - 1];
         }
 
-        private Counter[] partitions;
-        private Counter* partitionsPtr;
+        private readonly Counter[] partitions;
+#if NET5_0_OR_GREATER
+        private readonly Counter* partitionsPtr;
+#else
+        // we can't conveniently pin this buffer, especially since a struct (dispose semantics break down)
+        // instead, spoof via the array indexer; since not pinned, we can't obsess about the cache line
+        // alignment (because what is true initially: may cease to be true), so: we'll just eat any overhead;
+        // note an alternative here would be a "fixed buffer" of Counter directly inside ConcurrentCounter,
+        // but that would require careful analysis to see whether the struct is accessed in a single-location
+        // by-ref, vs copied; the original implementation is copy-safe; using a "fixed buffer" would not be
+        private Counter[] partitionsPtr => partitions;
+
+#endif
         const int partitionCount = 1; // Using a single partition for now
 
         /// <summary>Initializes a new instance of the <see cref="ConcurrentCounter"/> struct.</summary>
         public ConcurrentCounter()
         {
+#if NET5_0_OR_GREATER
             var size = partitionCount * Constants.kCacheLineBytes; // sizeof(Counter);
 
             // Allocate partitions array with an extra partition rounded up to cache line size.
@@ -37,6 +49,9 @@ namespace Tsavorite.core
             partitions = GC.AllocateArray<Counter>(alignedSize / Constants.kCacheLineBytes, true); // sizeof(Counter));
             long partitionsAlignedPtr = Utility.RoundUp((long)Unsafe.AsPointer(ref partitions[0]), Constants.kCacheLineBytes);
             partitionsPtr = (Counter*)partitionsAlignedPtr;
+#else
+            partitions = new Counter[partitionCount];
+#endif
         }
 
         /// <summary>Increments the counter by the specified value.</summary>
