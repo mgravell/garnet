@@ -428,5 +428,23 @@ namespace Tsavorite.core
         }
 
         internal static string GetHashString(long? hash) => hash.HasValue ? GetHashString(hash.Value) : "null";
+
+#if !NET5_0_OR_GREATER
+        internal static void SafeFree(this ref GCHandle handle)
+        {
+            if (handle.IsAllocated) handle.Free();
+        }
+        internal static void SafeFree(this GCHandle[] handles)
+        {
+            var snapshot = handles;
+            if (snapshot is not null)
+            {
+                for (int i =  0; i < snapshot.Length;i++)
+                {
+                    if (snapshot[i].IsAllocated) snapshot[i].Free();
+                }
+            }
+        }
+#endif
     }
 }

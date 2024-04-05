@@ -73,8 +73,7 @@ namespace Tsavorite.core
         private void Free(int version)
         {
 #if !NET5_0_OR_GREATER
-            if (state[version].pin.IsAllocated)
-                state[version].pin.Free();
+            state[version].pin.SafeFree();
 #endif
         }
 

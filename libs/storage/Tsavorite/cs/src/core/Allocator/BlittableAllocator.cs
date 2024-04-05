@@ -132,11 +132,8 @@ namespace Tsavorite.core
             base.Dispose();
             overflowPagePool.Dispose();
 #if !NET5_0_OR_GREATER
-            pointersPin.Free();
-            for (int i = 0; i < pins.Length; i++)
-            {
-                if (pins[i].IsAllocated) pins[i].Free();
-            }
+            pointersPin.SafeFree();
+            pins.SafeFree();
 #endif
         }
 

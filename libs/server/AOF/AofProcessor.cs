@@ -39,7 +39,7 @@ namespace Garnet.server
 
         readonly Dictionary<int, List<byte[]>> inflightTxns;
         readonly byte[] buffer;
-        readonly GCHandle handle;
+        GCHandle handle;
         readonly byte* bufferPtr;
 
         readonly ILogger logger;
@@ -92,7 +92,7 @@ namespace Garnet.server
         {
             session?.Dispose();
             objectStoreSession?.Dispose();
-            handle.Free();
+            if (handle.IsAllocated) handle.Free();
         }
 
         /// <summary>

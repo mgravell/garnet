@@ -429,7 +429,7 @@ namespace Tsavorite.core
         public void Dispose()
         {
 #if !NET5_0_OR_GREATER
-            pin.Free();
+            pin.SafeFree();
 #endif
         }
     }
@@ -594,7 +594,7 @@ namespace Tsavorite.core
         public void Dispose()
         {
 #if !NET5_0_OR_GREATER
-            pin.Free();
+            pin.SafeFree();
 #endif
             foreach (var bin in bins)
                 bin.Dispose();

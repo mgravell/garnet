@@ -85,7 +85,7 @@ namespace Garnet.common
         /// </summary>
         void Unpin()
         {
-            if (useHandlesForPin) handle.Free();
+            if (useHandlesForPin && handle.IsAllocated) handle.Free();
         }
     }
 }

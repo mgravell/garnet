@@ -128,7 +128,7 @@ namespace Tsavorite.core
         {
             buffer = null;
 #if !NET5_0_OR_GREATER
-            handle.Free();
+            handle.SafeFree();
 #endif
 #if CHECK_FREE
             this.Free = true;

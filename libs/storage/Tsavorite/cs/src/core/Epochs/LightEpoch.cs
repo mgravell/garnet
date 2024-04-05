@@ -159,7 +159,7 @@ namespace Tsavorite.core
             CurrentEpoch = 1;
             SafeToReclaimEpoch = 0;
 #if !NET5_0_OR_GREATER
-            tableRawPin.Free();
+            tableRawPin.SafeFree();
 #endif
         }
 
