@@ -191,7 +191,7 @@ namespace Tsavorite.core
 
         private readonly FreeRecord[] recordsArray;
 #if !NET5_0_OR_GREATER
-        private readonly GCHandle pin;
+        private GCHandle pin;
 #endif
         internal readonly int maxRecordSize, recordCount;
         protected readonly int minRecordSize, segmentSize, segmentCount, segmentRecordSizeIncrement;
@@ -439,7 +439,7 @@ namespace Tsavorite.core
         internal readonly TsavoriteKV<Key, Value> store;
         internal readonly FreeRecordBin[] bins;
 #if !NET5_0_OR_GREATER
-        private readonly GCHandle pin;
+        private GCHandle pin;
 #endif
 
         internal int numberOfBinsToSearch;
