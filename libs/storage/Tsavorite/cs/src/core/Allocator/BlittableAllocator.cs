@@ -171,15 +171,12 @@ namespace Tsavorite.core
             byte[] tmp = GC.AllocateArray<byte>(adjustedSize, true);
 #else
             byte[] tmp = new byte[adjustedSize];
-            var pin = GCHandle.Alloc(tmp, GCHandleType.Pinned);
+            pins[index] = GCHandle.Alloc(tmp, GCHandleType.Pinned);
 #endif
             long p = (long)Unsafe.AsPointer(ref tmp[0]);
             Array.Clear(tmp, 0, adjustedSize);
             pointers[index] = (p + (sectorSize - 1)) & ~((long)sectorSize - 1);
             values[index] = tmp;
-#if !NET5_0_OR_GREATER
-            pins[index] = pin;
-#endif
         }
 
         internal override int OverflowPageCount => overflowPagePool.Count;
