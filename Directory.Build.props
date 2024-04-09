@@ -2,5 +2,18 @@
 	<PropertyGroup>
 		<EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
+
+    <RepositoryUrl>https://github.com/microsoft/garnet.git</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageProjectUrl>https://microsoft.github.io/garnet</PackageProjectUrl>
+    <Authors>Microsoft</Authors>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReleaseNotes>See https://github.com/microsoft/garnet for details.</PackageReleaseNotes>
+    <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
+    <PackageTags>Garnet key-value store cache dictionary hashtable concurrent persistent remote cluster Redis RESP</PackageTags>
+    <DefaultLanguage>en-US</DefaultLanguage>
 	</PropertyGroup>
+    <ItemGroup>
+        <None Include="README.md" Link="README.md" Visible="false"/>
+    </ItemGroup>
 </Project>
